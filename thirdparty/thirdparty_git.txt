@@ -1,0 +1,8 @@
+rlutil
+https://github.com/tapio/rlutil.git
+
+Catch
+https://github.com/philsquared/Catch.git
+
+boost-cmake
+https://github.com/Orphis/boost-cmake.git
