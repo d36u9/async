@@ -1,5 +1,5 @@
-#async
-[![License](http://www.boost.org/LICENSE_1_0.txt)](LICENSE)
+# async
+[[License(Boost Software License - Version 1.0)](http://www.boost.org/LICENSE_1_0.txt)]
 
 ## Welcome
 async is a tiny C++ header-only high-performance library for async calls handled by a thread-pool, which is built on top of an unbounded MPMC lock-free queue.
