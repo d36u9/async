@@ -3,8 +3,12 @@
 
 ## Welcome
 async is a tiny C++ header-only high-performance library for async calls handled by a thread-pool, which is built on top of an unbounded MPMC lock-free queue.
+It's written in pure C++14 (C++11 support with preprocessor macros), no dependencies on other 3rd party libraries.
 
-It's written in C++14 (C++11 support with preprocessor macros).
+* New:
+  * Significantly improved the performance of async::queue without bulk operations. 
+  * async::threadpool also benifits from this change.
+  * A bounded MPMC queue `async::bounded_queue` was added to the lib, which is pretty useful for memory constrainted system or some fixed-size message pipeline design. The overall performance of this buffer based `async::bounded_queue` is comparable to bulk operations of node-based `async::queue`. `async::bounded_queue` shares the almost identical interface as `async::queue`, except for bulk operations, and a size prarameter has to be passed to `bounded_queue`'s constructor, and also added blocking methods (`blocking_enqueue` & `blocking_dequeue`). `TRAIT::NOEXCEPT_CHECK` setting is also similar to `async::queue` to help handle exceptions that may be thrown in element's ctor.  `bounded_queue` is basically a C++ implementation of [PTLQueue](https://blogs.oracle.com/dave/ptlqueue-:-a-scalable-bounded-capacity-mpmc-queue) design (Please read Dave Dice's article for details and references).
 
 ## Features
 * interchangeable with std::async, accepts all kinds of callable instances, like static functions, member functions, functors, lambdas
@@ -16,7 +20,7 @@ It's written in C++14 (C++11 support with preprocessor macros).
 ## Tested Platforms& Compilers
 (old versions of OSs or compilers may work, but not tested)
 * Windows 10 Visual Studio 2015+
-* Linux Ubuntu 16.04 gcc5.4+/clang 3.8+
+* Linux Ubuntu 16.04 gcc4.9.2+/clang 3.8+
 * MacOS Sierra 10.12.5 clang-802.0.42
 
 ## Getting Started
@@ -161,99 +165,106 @@ The test benchamarks the following task/job based async implementation:
 * AsioThreadPool (my another implementation based on boost::asio, has very stable and good performance, especially on Windows with iocp)
 * Microsoft::PPL (pplx from [cpprestsdk](https://github.com/Microsoft/cpprestsdk) on Linux& MacOS) or PPL on windows)
 
-e.g. Windows 7 64bit Intel i7-4790 16GB RAM Visual Studio 2015 Update 3
-```
-Benchmark Test Run: 1 Producers 7(* not applied) Consumers  with 21000 tasks and run 100 batches
-  async::threapool (time/task) avg: 762 ns  max: 966 ns  min: 755 ns avg_task_post: 852 ns
-       *std::async (time/task) avg: 1458 ns  max: 1777 ns  min: 1325 ns avg_task_post: 1420 ns
-   *Microsoft::PPL (time/task) avg: 1251 ns  max: 1353 ns  min: 1171 ns avg_task_post: 1208 ns
-    AsioThreadPool (time/task) avg: 1099 ns  max: 1159 ns  min: 1073 ns avg_task_post: 1064 ns
-     *boost::async (time/task) avg: 405040 ns  max: 433880 ns  min: 395135 ns avg_task_post: 405016 ns
-...
-Benchmark Test Run: 4 Producers 4(* not applied) Consumers  with 21000 tasks and run 100 batches
-  async::threapool (time/task) avg: 463 ns  max: 617 ns  min: 409 ns avg_task_post: 427 ns
-       *std::async (time/task) avg: 722 ns  max: 767 ns  min: 695 ns avg_task_post: 685 ns
-   *Microsoft::PPL (time/task) avg: 722 ns  max: 898 ns  min: 647 ns avg_task_post: 676 ns
-    AsioThreadPool (time/task) avg: 576 ns  max: 682 ns  min: 501 ns avg_task_post: 541 ns
-     *boost::async (time/task) avg: 143796 ns  max: 167185 ns  min: 137736 ns avg_task_post: 143770 ns
-...
-Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and run 100 batches
-  async::threapool (time/task) avg: 325 ns  max: 412 ns  min: 299 ns avg_task_post: 276 ns
-       *std::async (time/task) avg: 850 ns  max: 1506 ns  min: 728 ns avg_task_post: 805 ns
-   *Microsoft::PPL (time/task) avg: 736 ns  max: 841 ns  min: 693 ns avg_task_post: 688 ns
-    AsioThreadPool (time/task) avg: 785 ns  max: 881 ns  min: 728 ns avg_task_post: 409 ns
-     *boost::async (time/task) avg: 126887 ns  max: 154059 ns  min: 123282 ns avg_task_post: 126857 ns
-```
 
 e.g. Windows 10 64bit Intel i7-6700K 16GB RAM 480GB SSD Visual Studio 2017 (cl 19.11.25507.1 x64)
 ```
-...
-Benchmark Test Run: 4 Producers 4(* not applied) Consumers  with 21000 tasks and run 100 batches
-  async::threapool (time/task) avg: 454 ns  max: 554 ns  min: 394 ns avg_task_post: 372 ns
-       *std::async (time/task) avg: 902 ns  max: 981 ns  min: 828 ns avg_task_post: 681 ns
-   *Microsoft::PPL (time/task) avg: 685 ns  max: 753 ns  min: 659 ns avg_task_post: 622 ns
-    AsioThreadPool (time/task) avg: 456 ns  max: 492 ns  min: 395 ns avg_task_post: 372 ns
-     *boost::async (time/task) avg: 42186 ns  max: 48573 ns  min: 36278 ns avg_task_post: 37202 ns
-...
-
-Benchmark Test Run: 6 Producers 2(* not applied) Consumers  with 12000 tasks and run 100 batches
-    async::threapool (time/task) avg: 327 ns  max: 400 ns  min: 305 ns avg_task_post: 227 ns
-         *std::async (time/task) avg: 896 ns  max: 1009 ns  min: 771 ns avg_task_post: 693 ns
-     *Microsoft::PPL (time/task) avg: 712 ns  max: 773 ns  min: 639 ns avg_task_post: 654 ns
-      AsioThreadPool (time/task) avg: 485 ns  max: 535 ns  min: 435 ns avg_task_post: 240 ns
-       *boost::async (time/task) avg: 36062 ns  max: 39274 ns  min: 34510 ns avg_task_post: 33730 ns
-```
-
-e.g. MacOS 10.12.5 clang Intel i7-6700K 16GB RAM 250GB SSD clang-802.0.42 (Microsoft::PPL(cpprestsdk::pplx) is superisingly good compared with other libraries on MacOS)
-```
 Benchmark Test Run: 1 Producers 7(* not applied) Consumers  with 21000 tasks and run 100 batches
-  async::threapool (time/task) avg: 8518 ns  max: 8628 ns  min: 8451 ns avg_task_post: 8395 ns
-       *std::async (time/task) avg: 13607 ns  max: 15908 ns  min: 13079 ns avg_task_post: 13470 ns
-   *Microsoft::PPL (time/Task) avg: 736 ns  max: 906 ns  min: 650 ns avg_task_post: 707 ns
-    AsioThreadPool (time/task) avg: 8597 ns  max: 8706 ns  min: 8526 ns avg_task_post: 8475 ns
-     *boost::async (time/task) avg: 12147 ns  max: 12319 ns  min: 11845 ns avg_task_post: 12114 ns
+  async::threapool (time/task) avg: 1130 ns  max: 1227 ns  min: 1066 ns avg_task_post: 1032 ns
+       *std::async (time/task) avg: 1469 ns  max: 1549 ns  min: 1423 ns avg_task_post: 1250 ns
+   *Microsoft::PPL (time/task) avg: 1148 ns  max: 1216 ns  min: 1114 ns avg_task_post: 1088 ns
+    AsioThreadPool (time/task) avg: 1166 ns  max: 1319 ns  min: 1013 ns avg_task_post: 1073 ns
+     *boost::async (time/task) avg: 29153 ns  max: 30028 ns  min: 27990 ns avg_task_post: 23343 ns
 ...
 Benchmark Test Run: 4 Producers 4(* not applied) Consumers  with 21000 tasks and run 100 batches
-  async::threapool (time/Task) avg: 5912 ns  max: 5984 ns  min: 5776 ns avg_task_post: 5777 ns
-       *std::async (time/Task) avg: 9730 ns  max: 9995 ns  min: 9374 ns avg_task_post: 9573 ns
-   *Microsoft::PPL (time/Task) avg: 376 ns  max: 398 ns  min: 344 ns avg_task_post: 348 ns
-    AsioThreadPool (time/Task) avg: 6108 ns  max: 6172 ns  min: 6050 ns avg_task_post: 5975 ns
-     *boost::async (time/Task) avg: 8929 ns  max: 9631 ns  min: 8760 ns avg_task_post: 8876 ns
+  async::threapool (time/task) avg: 439 ns  max: 557 ns  min: 398 ns avg_task_post: 356 ns
+       *std::async (time/task) avg: 800 ns  max: 890 ns  min: 759 ns avg_task_post: 629 ns
+   *Microsoft::PPL (time/task) avg: 666 ns  max: 701 ns  min: 640 ns avg_task_post: 605 ns
+    AsioThreadPool (time/task) avg: 448 ns  max: 541 ns  min: 389 ns avg_task_post: 365 ns
+     *boost::async (time/task) avg: 32419 ns  max: 33296 ns  min: 30105 ns avg_task_post: 25561 ns
 ...
 Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and run 100 batches
-  async::threapool (time/task) avg: 3449 ns  max: 3517 ns  min: 3387 ns avg_task_post: 3317 ns
-       *std::async (time/Task) avg: 11272 ns  max: 11511 ns  min: 11118 ns avg_task_post: 11109 ns
-   *Microsoft::PPL (time/task) avg: 382 ns  max: 489 ns  min: 325 ns avg_task_post: 295 ns
-    AsioThreadPool (time/Task) avg: 3917 ns  max: 3973 ns  min: 3872 ns avg_task_post: 3403 ns
-     *boost::async (time/Task) avg: 10248 ns  max: 10906 ns  min: 9536 ns avg_task_post: 10192 ns     
+  async::threapool (time/task) avg: 262 ns  max: 300 ns  min: 252 ns avg_task_post: 176 ns
+       *std::async (time/task) avg: 873 ns  max: 961 ns  min: 821 ns avg_task_post: 701 ns
+   *Microsoft::PPL (time/task) avg: 727 ns  max: 755 ns  min: 637 ns avg_task_post: 662 ns
+    AsioThreadPool (time/task) avg: 607 ns  max: 645 ns  min: 567 ns avg_task_post: 210 ns
+     *boost::async (time/task) avg: 33158 ns  max: 150331 ns  min: 28560 ns avg_task_post: 28655 ns
 ```
 
 e.g. Ubuntu 17.04 Intel i7-6700K 16GB RAM 100GB HDD gcc 6.3.0
 ```
-Benchmark Test Run: 1 Producers 7(* not applied) Consumers  with 21000 tasks and run 1 batches
-  async::threapool (time/task) avg: 1284 ns  max: 1284 ns  min: 1284 ns avg_task_post: 1224 ns
-       *std::async (time/task) avg: 11985 ns  max: 11985 ns  min: 11985 ns avg_task_post: 9780 ns
-   *Microsoft::PPL (time/task) avg: 1597 ns  max: 1597 ns  min: 1597 ns avg_task_post: 1572 ns
-    AsioThreadPool (time/task) avg: 1445 ns  max: 1445 ns  min: 1445 ns avg_task_post: 1393 ns
-     *boost::async (time/task) avg: 4700 ns  max: 4700 ns  min: 4700 ns avg_task_post: 4665 ns
+Benchmark Test Run: 1 Producers 7(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 1320 ns  max: 1357 ns  min: 1301 ns avg_task_post: 1266 ns
+       *std::async (time/task) avg: 11817 ns  max: 12469 ns  min: 11533 ns avg_task_post: 9580 ns
+   *Microsoft::PPL (time/task) avg: 1368 ns  max: 1498 ns  min: 1325 ns avg_task_post: 1349 ns
+    AsioThreadPool (time/task) avg: 1475 ns  max: 1499 ns  min: 1318 ns avg_task_post: 1332 ns
+     *boost::async (time/task) avg: 4574 ns  max: 4697 ns  min: 4450 ns avg_task_post: 4531 ns
 ...
-Benchmark Test Run: 4 Producers 4(* not applied) Consumers  with 21000 tasks and run 1 batches
-  async::threapool (time/task) avg: 383 ns  max: 556 ns  min: 269 ns avg_task_post: 320 ns
-       *std::async (time/task) avg: 33691 ns  max: 33691 ns  min: 33691 ns avg_task_post: 30377 ns
-   *Microsoft::PPL (time/task) avg: 3718 ns  max: 3718 ns  min: 3718 ns avg_task_post: 3692 ns
-    AsioThreadPool (time/task) avg: 555 ns  max: 1036 ns  min: 493 ns avg_task_post: 495 ns
-     *boost::async (time/task) avg: 16124 ns  max: 18450 ns  min: 10895 ns avg_task_post: 16075 ns
+Benchmark Test Run: 4 Producers 4(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 516 ns  max: 688 ns  min: 239 ns avg_task_post: 522 ns
+       *std::async (time/task) avg: 41630 ns  max: 44316 ns  min: 41334 ns avg_task_post: 38151 ns
+   *Microsoft::PPL (time/task) avg: 3652 ns  max: 3710 ns  min: 3598 ns avg_task_post: 3629 ns
+    AsioThreadPool (time/task) avg: 529 ns  max: 814 ns  min: 494 ns avg_task_post: 447 ns
+     *boost::async (time/task) avg: 14634 ns  max: 14669 ns  min: 14598 ns avg_task_post: 14583 ns
 ...
-Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and run 1 batches
-  async::threapool (time/task) avg: 436 ns  max: 436 ns  min: 436 ns avg_task_post: 198 ns
-       *std::async (time/task) avg: 36362 ns  max: 36362 ns  min: 36362 ns avg_task_post: 32807 ns
-   *Microsoft::PPL (time/task) avg: 3771 ns  max: 3771 ns  min: 3771 ns avg_task_post: 3751 ns
-    AsioThreadPool (time/task) avg: 539 ns  max: 569 ns  min: 505 ns avg_task_post: 253 ns
-     *boost::async (time/task) avg: 21519 ns  max: 21519 ns  min: 21519 ns avg_task_post: 21480 ns
-
+Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 398 ns  max: 468 ns  min: 337 ns avg_task_post: 177 ns
+       *std::async (time/task) avg: 44603 ns  max: 46904 ns  min: 44272 ns avg_task_post: 40877 ns
+   *Microsoft::PPL (time/task) avg: 3714 ns  max: 3816 ns  min: 3656 ns avg_task_post: 3690 ns
+    AsioThreadPool (time/task) avg: 564 ns  max: 605 ns  min: 533 ns avg_task_post: 253 ns
+     *boost::async (time/task) avg: 20421 ns  max: 21738 ns  min: 19105 ns avg_task_post: 20375 ns
 ```
+
+e.g. MacOS 10.12.5 clang Intel i7-6700K 16GB RAM 250GB SSD clang-802.0.42 (Microsoft::PPL(cpprestsdk::pplx) is superisingly good compared with other libraries on MacOS, not sure if it's due to some comipiler optimization)
+```
+Benchmark Test Run: 1 Producers 7(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 8517 ns  max: 8641 ns  min: 7400 ns avg_task_post: 8393 ns
+       *std::async (time/task) avg: 13618 ns  max: 13845 ns  min: 13276 ns avg_task_post: 13476 ns
+   *Microsoft::PPL (time/task) avg: 747 ns  max: 938 ns  min: 626 ns avg_task_post: 718 ns
+    AsioThreadPool (time/task) avg: 8647 ns  max: 8807 ns  min: 8558 ns avg_task_post: 8524 ns
+     *boost::async (time/task) avg: 11732 ns  max: 12028 ns  min: 11526 ns avg_task_post: 11698 ns
+...
+Benchmark Test Run: 4 Producers 4(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 5964 ns  max: 6017 ns  min: 5790 ns avg_task_post: 5830 ns
+       *std::async (time/task) avg: 9690 ns  max: 10043 ns  min: 9132 ns avg_task_post: 9531 ns
+   *Microsoft::PPL (time/task) avg: 380 ns  max: 425 ns  min: 342 ns avg_task_post: 353 ns
+    AsioThreadPool (time/task) avg: 6173 ns  max: 6459 ns  min: 6116 ns avg_task_post: 6042 ns
+     *boost::async (time/task) avg: 8643 ns  max: 9470 ns  min: 8513 ns avg_task_post: 8591 ns
+...
+Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 3469 ns  max: 3527 ns  min: 3415 ns avg_task_post: 3339 ns
+       *std::async (time/task) avg: 10902 ns  max: 11164 ns  min: 10709 ns avg_task_post: 10738 ns
+   *Microsoft::PPL (time/task) avg: 367 ns  max: 426 ns  min: 326 ns avg_task_post: 323 ns
+    AsioThreadPool (time/task) avg: 3920 ns  max: 3975 ns  min: 3832 ns avg_task_post: 3409 ns
+     *boost::async (time/task) avg: 9800 ns  max: 10223 ns  min: 9196 ns avg_task_post: 9744 ns
+```
+
+e.g. Windows 7 64bit Intel i7-4790 16GB RAM Visual Studio 2015 Update 3
+```
+Benchmark Test Run: 1 Producers 7(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 809 ns  max: 924 ns  min: 687 ns avg_task_post: 774 ns
+       *std::async (time/task) avg: 1914 ns  max: 2032 ns  min: 1790 ns avg_task_post: 1877 ns
+   *Microsoft::PPL (time/task) avg: 1718 ns  max: 2181 ns  min: 1623 ns avg_task_post: 1677 ns
+    AsioThreadPool (time/task) avg: 1100 ns  max: 1137 ns  min: 1076 ns avg_task_post: 1065 ns
+     *boost::async (time/task) avg: 191532 ns  max: 203716 ns  min: 186114 ns avg_task_post: 191507 ns
+...
+Benchmark Test Run: 4 Producers 4(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 423 ns  max: 538 ns  min: 338 ns avg_task_post: 388 ns
+       *std::async (time/task) avg: 1249 ns  max: 1279 ns  min: 1233 ns avg_task_post: 1211 ns
+   *Microsoft::PPL (time/task) avg: 1229 ns  max: 1246 ns  min: 1208 ns avg_task_post: 1186 ns
+    AsioThreadPool (time/task) avg: 563 ns  max: 577 ns  min: 499 ns avg_task_post: 528 ns
+     *boost::async (time/task) avg: 95484 ns  max: 112569 ns  min: 93808 ns avg_task_post: 95458 ns
+...
+Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 267 ns  max: 323 ns  min: 255 ns avg_task_post: 232 ns
+       *std::async (time/task) avg: 1202 ns  max: 1257 ns  min: 1182 ns avg_task_post: 1009 ns
+   *Microsoft::PPL (time/task) avg: 1199 ns  max: 1262 ns  min: 1175 ns avg_task_post: 988 ns
+    AsioThreadPool (time/task) avg: 783 ns  max: 960 ns  min: 706 ns avg_task_post: 375 ns
+     *boost::async (time/task) avg: 103572 ns  max: 107041 ns  min: 101993 ns avg_task_post: 103542 ns
+```
+
 ### queue benchmark
 The benchmark uses producers-consumers model, and doesn't provide all the detailed measurements.
+* async::bounded_queue
 * async::queue
 * boost::lockfree::queue
 * boost::lockfree::spsc_queue  (only for single-producer-single-consumer test)
@@ -262,70 +273,161 @@ e.g. Windows 10 64bit Intel i7-6700K 16GB RAM 480GB SSD Visual Studio 2017 (cl 1
 ```
 Single Producer Single Consumer Benchmark with 10000 Ops and run 1000 batches
 Benchmark Test Run: 1 Producers 1 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 28 ns  max: 118 ns  min: 24 ns
-          async::queue (time/op) avg: 88 ns  max: 137 ns  min: 49 ns
-boost::lockfree::queue (time/op) avg: 142 ns  max: 169 ns  min: 116 ns
-boost::lockfree::spsc_queue (time/op) avg: 11 ns  max: 37 ns  min: 10 ns
+  async::bounded_queue (time/op) avg: 18 ns  max: 55 ns  min: 17 ns
+async::queue::bulk(16) (time/op) avg: 26 ns  max: 50 ns  min: 23 ns
+          async::queue (time/op) avg: 28 ns  max: 66 ns  min: 27 ns
+boost::lockfree::queue (time/op) avg: 167 ns  max: 195 ns  min: 70 ns
+boost::lockfree::spsc_queue (time/op) avg: 10 ns  max: 38 ns  min: 8 ns
 
 Benchmark Test Run: 1 Producers 7 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 37 ns  max: 115 ns  min: 32 ns
-          async::queue (time/op) avg: 194 ns  max: 271 ns  min: 108 ns
-boost::lockfree::queue (time/op) avg: 219 ns  max: 255 ns  min: 200 ns
-...
+  async::bounded_queue (time/op) avg: 27 ns  max: 62 ns  min: 25 ns
+async::queue::bulk(16) (time/op) avg: 28 ns  max: 124 ns  min: 24 ns
+          async::queue (time/op) avg: 42 ns  max: 115 ns  min: 29 ns
+boost::lockfree::queue (time/op) avg: 240 ns  max: 576 ns  min: 119 ns
+
+Benchmark Test Run: 2 Producers 6 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 44 ns  max: 78 ns  min: 29 ns
+async::queue::bulk(16) (time/op) avg: 34 ns  max: 109 ns  min: 28 ns
+          async::queue (time/op) avg: 90 ns  max: 122 ns  min: 44 ns
+boost::lockfree::queue (time/op) avg: 213 ns  max: 227 ns  min: 161 ns
+
+Benchmark Test Run: 3 Producers 5 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 53 ns  max: 82 ns  min: 27 ns
+async::queue::bulk(16) (time/op) avg: 34 ns  max: 107 ns  min: 29 ns
+          async::queue (time/op) avg: 100 ns  max: 114 ns  min: 51 ns
+boost::lockfree::queue (time/op) avg: 197 ns  max: 207 ns  min: 186 ns
+
+Benchmark Test Run: 4 Producers 4 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 31 ns  max: 81 ns  min: 25 ns
+async::queue::bulk(16) (time/op) avg: 31 ns  max: 104 ns  min: 28 ns
+          async::queue (time/op) avg: 93 ns  max: 117 ns  min: 73 ns
+boost::lockfree::queue (time/op) avg: 211 ns  max: 222 ns  min: 162 ns
+
+Benchmark Test Run: 5 Producers 3 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 52 ns  max: 79 ns  min: 30 ns
+async::queue::bulk(16) (time/op) avg: 33 ns  max: 103 ns  min: 29 ns
+          async::queue (time/op) avg: 94 ns  max: 126 ns  min: 74 ns
+boost::lockfree::queue (time/op) avg: 199 ns  max: 217 ns  min: 174 ns
+
 Benchmark Test Run: 6 Producers 2 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 37 ns  max: 77 ns  min: 33 ns
-          async::queue (time/op) avg: 101 ns  max: 161 ns  min: 67 ns
-boost::lockfree::queue (time/op) avg: 163 ns  max: 196 ns  min: 112 ns
+  async::bounded_queue (time/op) avg: 49 ns  max: 81 ns  min: 35 ns
+async::queue::bulk(16) (time/op) avg: 33 ns  max: 60 ns  min: 28 ns
+          async::queue (time/op) avg: 97 ns  max: 134 ns  min: 51 ns
+boost::lockfree::queue (time/op) avg: 185 ns  max: 198 ns  min: 152 ns
 
 Benchmark Test Run: 7 Producers 1 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 39 ns  max: 78 ns  min: 35 ns
-          async::queue (time/op) avg: 57 ns  max: 117 ns  min: 54 ns
-boost::lockfree::queue (time/op) avg: 139 ns  max: 177 ns  min: 95 ns
+  async::bounded_queue (time/op) avg: 36 ns  max: 81 ns  min: 34 ns
+async::queue::bulk(16) (time/op) avg: 30 ns  max: 60 ns  min: 26 ns
+          async::queue (time/op) avg: 48 ns  max: 89 ns  min: 45 ns
+boost::lockfree::queue (time/op) avg: 161 ns  max: 179 ns  min: 120 ns
 ```
+
 e.g. MacOS 10.12.5 Intel i7-6700K 16GB RAM 250GB SSD clang-802.0.42
 ```
-Single Producer Single Consumer Benchmark with 10000 Ops and run 1000 batches
+SSingle Producer Single Consumer Benchmark with 10000 Ops and run 1000 batches
 Benchmark Test Run: 1 Producers 1 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 26 ns  max: 105 ns  min: 25 ns
-          async::queue (time/op) avg: 119 ns  max: 973 ns  min: 44 ns
-boost::lockfree::queue (time/op) avg: 156 ns  max: 173 ns  min: 124 ns
-boost::lockfree::spsc_queue (time/op) avg: 11 ns  max: 35 ns  min: 5 ns
-...
+  async::bounded_queue (time/op) avg: 12 ns  max: 37 ns  min: 12 ns
+async::queue::bulk(16) (time/op) avg: 26 ns  max: 54 ns  min: 25 ns
+          async::queue (time/op) avg: 23 ns  max: 61 ns  min: 23 ns
+boost::lockfree::queue (time/op) avg: 156 ns  max: 172 ns  min: 118 ns
+boost::lockfree::spsc_queue (time/op) avg: 11 ns  max: 30 ns  min: 5 ns
+
+Benchmark Test Run: 1 Producers 7 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 84 ns  max: 98 ns  min: 60 ns
+async::queue::bulk(16) (time/op) avg: 27 ns  max: 125 ns  min: 24 ns
+          async::queue (time/op) avg: 104 ns  max: 115 ns  min: 92 ns
+boost::lockfree::queue (time/op) avg: 231 ns  max: 326 ns  min: 213 ns
+
+Benchmark Test Run: 2 Producers 6 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 82 ns  max: 100 ns  min: 61 ns
+async::queue::bulk(16) (time/op) avg: 36 ns  max: 108 ns  min: 31 ns
+          async::queue (time/op) avg: 102 ns  max: 122 ns  min: 90 ns
+boost::lockfree::queue (time/op) avg: 192 ns  max: 229 ns  min: 184 ns
+
+Benchmark Test Run: 3 Producers 5 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 79 ns  max: 93 ns  min: 61 ns
+async::queue::bulk(16) (time/op) avg: 31 ns  max: 94 ns  min: 29 ns
+          async::queue (time/op) avg: 98 ns  max: 116 ns  min: 70 ns
+boost::lockfree::queue (time/op) avg: 189 ns  max: 198 ns  min: 175 ns
+
 Benchmark Test Run: 4 Producers 4 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 37 ns  max: 134 ns  min: 32 ns
-          async::queue (time/op) avg: 146 ns  max: 155 ns  min: 121 ns
-boost::lockfree::queue (time/op) avg: 202 ns  max: 222 ns  min: 177 ns
-...
+  async::bounded_queue (time/op) avg: 77 ns  max: 146 ns  min: 56 ns
+async::queue::bulk(16) (time/op) avg: 28 ns  max: 92 ns  min: 26 ns
+          async::queue (time/op) avg: 93 ns  max: 167 ns  min: 73 ns
+boost::lockfree::queue (time/op) avg: 200 ns  max: 218 ns  min: 182 ns
+
+Benchmark Test Run: 5 Producers 3 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 76 ns  max: 92 ns  min: 48 ns
+async::queue::bulk(16) (time/op) avg: 27 ns  max: 89 ns  min: 24 ns
+          async::queue (time/op) avg: 97 ns  max: 140 ns  min: 83 ns
+boost::lockfree::queue (time/op) avg: 200 ns  max: 211 ns  min: 163 ns
+
+Benchmark Test Run: 6 Producers 2 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 80 ns  max: 98 ns  min: 59 ns
+async::queue::bulk(16) (time/op) avg: 28 ns  max: 97 ns  min: 24 ns
+          async::queue (time/op) avg: 105 ns  max: 122 ns  min: 78 ns
+boost::lockfree::queue (time/op) avg: 182 ns  max: 194 ns  min: 153 ns
+
 Benchmark Test Run: 7 Producers 1 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 30 ns  max: 173 ns  min: 25 ns
-          async::queue (time/op) avg: 120 ns  max: 140 ns  min: 110 ns
-boost::lockfree::queue (time/op) avg: 158 ns  max: 833 ns  min: 68 ns
+  async::bounded_queue (time/op) avg: 86 ns  max: 103 ns  min: 64 ns
+async::queue::bulk(16) (time/op) avg: 27 ns  max: 82 ns  min: 23 ns
+          async::queue (time/op) avg: 107 ns  max: 127 ns  min: 91 ns
+boost::lockfree::queue (time/op) avg: 154 ns  max: 180 ns  min: 146 ns
 ```
+
 e.g. Ubuntu 17.04 Intel i7-6700K 16GB RAM 100GB HDD gcc 6.3.0
 ```
 Single Producer Single Consumer Benchmark with 10000 Ops and run 1000 batches
 Benchmark Test Run: 1 Producers 1 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 59 ns  max: 448 ns  min: 28 ns
-          async::queue (time/op) avg: 136 ns  max: 278 ns  min: 72 ns
-boost::lockfree::queue (time/op) avg: 181 ns  max: 236 ns  min: 58 ns
-boost::lockfree::spsc_queue (time/op) avg: 7 ns  max: 167 ns  min: 5 ns
+  async::bounded_queue (time/op) avg: 12 ns  max: 71 ns  min: 11 ns
+async::queue::bulk(16) (time/op) avg: 65 ns  max: 134 ns  min: 24 ns
+          async::queue (time/op) avg: 48 ns  max: 107 ns  min: 33 ns
+boost::lockfree::queue (time/op) avg: 179 ns  max: 198 ns  min: 60 ns
+boost::lockfree::spsc_queue (time/op) avg: 7 ns  max: 47 ns  min: 4 ns
 
 Benchmark Test Run: 1 Producers 7 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 27 ns  max: 289 ns  min: 24 ns
-          async::queue (time/op) avg: 186 ns  max: 212 ns  min: 154 ns
-boost::lockfree::queue (time/op) avg: 228 ns  max: 288 ns  min: 194 ns
-...
-Benchmark Test Run: 4 Producers 4 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 33 ns  max: 159 ns  min: 28 ns
-          async::queue (time/op) avg: 148 ns  max: 370 ns  min: 125 ns
-boost::lockfree::queue (time/op) avg: 183 ns  max: 452 ns  min: 161 ns
-...
-Benchmark Test Run: 7 Producers 1 Consumers  with 10000 Ops and run 1000 batches
-async::queue::bulk(16) (time/op) avg: 32 ns  max: 90 ns  min: 27 ns
-          async::queue (time/op) avg: 151 ns  max: 762 ns  min: 122 ns
-boost::lockfree::queue (time/op) avg: 194 ns  max: 605 ns  min: 151 ns
+  async::bounded_queue (time/op) avg: 68 ns  max: 505 ns  min: 35 ns
+async::queue::bulk(16) (time/op) avg: 29 ns  max: 135 ns  min: 25 ns
+          async::queue (time/op) avg: 93 ns  max: 138 ns  min: 73 ns
+boost::lockfree::queue (time/op) avg: 234 ns  max: 292 ns  min: 208 ns
 
+Benchmark Test Run: 2 Producers 6 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 68 ns  max: 106 ns  min: 39 ns
+async::queue::bulk(16) (time/op) avg: 35 ns  max: 117 ns  min: 19 ns
+          async::queue (time/op) avg: 92 ns  max: 135 ns  min: 79 ns
+boost::lockfree::queue (time/op) avg: 193 ns  max: 227 ns  min: 175 ns
+
+Benchmark Test Run: 3 Producers 5 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 73 ns  max: 251 ns  min: 49 ns
+async::queue::bulk(16) (time/op) avg: 31 ns  max: 110 ns  min: 26 ns
+          async::queue (time/op) avg: 96 ns  max: 178 ns  min: 70 ns
+boost::lockfree::queue (time/op) avg: 179 ns  max: 359 ns  min: 164 ns
+
+Benchmark Test Run: 4 Producers 4 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 81 ns  max: 220 ns  min: 61 ns
+async::queue::bulk(16) (time/op) avg: 27 ns  max: 114 ns  min: 23 ns
+          async::queue (time/op) avg: 102 ns  max: 159 ns  min: 74 ns
+boost::lockfree::queue (time/op) avg: 177 ns  max: 541 ns  min: 162 ns
+
+Benchmark Test Run: 5 Producers 3 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 83 ns  max: 443 ns  min: 53 ns
+async::queue::bulk(16) (time/op) avg: 26 ns  max: 297 ns  min: 23 ns
+          async::queue (time/op) avg: 110 ns  max: 512 ns  min: 79 ns
+boost::lockfree::queue (time/op) avg: 176 ns  max: 505 ns  min: 161 ns
+
+Benchmark Test Run: 6 Producers 2 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 83 ns  max: 437 ns  min: 36 ns
+async::queue::bulk(16) (time/op) avg: 26 ns  max: 261 ns  min: 23 ns
+          async::queue (time/op) avg: 112 ns  max: 449 ns  min: 84 ns
+boost::lockfree::queue (time/op) avg: 178 ns  max: 547 ns  min: 164 ns
+
+Benchmark Test Run: 7 Producers 1 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 90 ns  max: 805 ns  min: 28 ns
+async::queue::bulk(16) (time/op) avg: 26 ns  max: 78 ns  min: 21 ns
+          async::queue (time/op) avg: 123 ns  max: 695 ns  min: 80 ns
+boost::lockfree::queue (time/op) avg: 195 ns  max: 615 ns  min: 154 ns
 ```
+
 ## coding style
 all code has been formated by clang-format. It may be more easy to read in text editor or may be not :)
 

@@ -6,14 +6,14 @@
 /////////////////////////////////////////////////////////////////////
 #pragma once
 
-#if ((defined(__clang__) || defined(__GNUC__)) && __cplusplus < 201103L) ||   \
+#if ((defined(__clang__) || defined(__GNUC__)) && __cplusplus < 201103L) ||    \
     (defined(_MSC_VER) && _MSC_VER < 1800)
 #error This library needs at least a C++11 compliant compiler
 #endif
 #include <climits>
 #include <cstdint>
-#include <string>
 #include <memory>
+#include <string>
 template <typename T> static constexpr T getBitmask(unsigned int const bits) {
   return static_cast<T>(-(bits != 0)) &
          (static_cast<T>(-1) >> ((sizeof(T) * CHAR_BIT) - bits));
@@ -52,22 +52,18 @@ static constexpr unsigned int getShiftBitsCount(uint64_t n) {
   return n == 0 ? 0 : ((n & 0x1) == 0 ? 1 + getShiftBitsCount(n >> 1) : 0);
 }
 
-#if  (__cplusplus == 201103L) && (defined(__clang__) || defined(__GNUC__))
-namespace std { //for c+11
-	template <typename T, typename... Args>
-	std::unique_ptr<T> make_unique(Args &&... args) {
-		return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-	}
+#if (__cplusplus == 201103L) && (defined(__clang__) || defined(__GNUC__))
+namespace std { // for c+11
+template <typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args &&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 } // namespace std
 #endif
 
 #else
 #error This library needs at least a C++11 compliant compiler
 #endif
-
-
-
-
 
 // for exception construction
 inline std::string getErrorMsg(std::string const &message, char const *file,
@@ -79,6 +75,9 @@ inline std::string getErrorMsg(std::string const &message, char const *file,
 #define ERROR_MSG(...) getErrorMsg(__VA_ARGS__, __FILE__, __func__, __LINE__)
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <stdlib.h>
 #include <windows.h>
 

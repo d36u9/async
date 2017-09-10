@@ -13,7 +13,7 @@ if(NOT CMAKE_BUILD_TYPE)
       FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
-project(async VERSION 1.0.0 LANGUAGES CXX)
+project(async VERSION 1.1.0 LANGUAGES CXX)
 
 
 set(BUILD_TESTS ON CACHE BOOL "Build tests.")
@@ -69,7 +69,7 @@ target_include_directories(libasync INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/async>
     $<INSTALL_INTERFACE:${LIBRARY_OUTPUT_PATH}/include/async>)
 
-set(LibAsyncHeader ${PROJECT_SOURCE_DIR}/async/utility.h ${PROJECT_SOURCE_DIR}/async/queue.h ${PROJECT_SOURCE_DIR}/async/threadpool.h)
+set(LibAsyncHeader ${PROJECT_SOURCE_DIR}/async/utility.h ${PROJECT_SOURCE_DIR}/async/queue.h ${PROJECT_SOURCE_DIR}/async/bounded_queue.h ${PROJECT_SOURCE_DIR}/async/threadpool.h)
 
 
 #add to IDE

@@ -14,6 +14,7 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #endif
 
+#include "bounded_queue.h"
 #include "queue.h"
 #include "rlutil.h"
 #include <algorithm>
@@ -107,6 +108,8 @@ void benchmark(NAME &name, int numProducers, int numConsumers, uint64_t numOps,
   printResult(name, sumt / batches / numOps, maxt / numOps, mint / numOps);
 }
 
+// not an accurate measure, just a fuzzy test, assertion may fail
+// see inside comments for details
 template <typename Q, int BULK = 5, typename NAME>
 void benchmark_bulk(NAME &name, int numProducers, int numConsumers,
                     uint64_t numOps, int batches) {
@@ -121,6 +124,13 @@ void benchmark_bulk(NAME &name, int numProducers, int numConsumers,
   std::atomic<bool> consumestop(false);
   for (int b = 0; b < batches; ++b) {
     sum = 0;
+#if defined(_WIN32) && defined(_DEBUG)
+	consumestop = false; // only for VS Debug, this will dramatically affect
+						 // the bulk test timing due to spinning loop.
+	                     // if assertion fails on any platforms/builds
+						 // remove #if & #endif
+						 // consumestop has be rest to false in each loop
+#endif
     s = std::chrono::high_resolution_clock::now();
     std::vector<std::thread> producers(numProducers);
     for (int t = 0; t < numProducers; ++t) {
@@ -147,23 +157,22 @@ void benchmark_bulk(NAME &name, int numProducers, int numConsumers,
         int popcnt = 0;
         int bulkdata[BULK];
         while (!consumestop || popcnt > 0) {
-          popcnt = q.bulk_dequeue(std::begin(bulkdata), BULK);
+          popcnt = static_cast<int>(q.bulk_dequeue(std::begin(bulkdata), BULK));
           if (popcnt > 0) {
             for (int c = 0; c < popcnt; ++c)
               localSum += bulkdata[c];
           }
         }
-
         sum += localSum;
       });
     }
 
-    for (auto &t : producers) {
-      t.join();
+    for (auto &p : producers) {
+      p.join();
     }
     consumestop = true;
-    for (auto &t : consumers) {
-      t.join();
+    for (auto &c : consumers) {
+      c.join();
     }
     e = std::chrono::high_resolution_clock::now();
     uint64_t sum1t =
@@ -197,6 +206,11 @@ struct boost_spsc_queue_adapter : public boost::lockfree::spsc_queue<T> {
 };
 #endif
 
+template <typename T, int S = 50000>
+struct bounded_queue_adapter : public async::bounded_queue<T> {
+  bounded_queue_adapter(size_t) : async::bounded_queue<T>(S){};
+};
+
 void batch_bm(int numProducers, int numConsumers, int const ops, int batches) {
   rlutil::setColor(rlutil::BLACK);
   rlutil::setBackgroundColor(rlutil::WHITE);
@@ -206,6 +220,10 @@ void batch_bm(int numProducers, int numConsumers, int const ops, int batches) {
   rlutil::setBackgroundColor(rlutil::BLACK);
   std::cout << std::endl;
   rlutil::setBackgroundColor(rlutil::BLACK);
+
+  benchmark<bounded_queue_adapter<int, 16384>>(
+      "async::bounded_queue", numProducers, numConsumers, ops, batches);
+
   benchmark_bulk<async::queue<int>, 16>("async::queue::bulk", numProducers,
                                         numConsumers, ops, batches);
   benchmark<async::queue<int>>("async::queue", numProducers, numConsumers, ops,

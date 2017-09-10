@@ -3,10 +3,10 @@ add_executable(${PROJECT_NAME}
     ../main.cpp
     utility_test.cpp
     queue_test.cpp
+    bounded_queue_test.cpp
     threadpool_test.cpp
     ../../async/utility.h
     ../../async/queue.h
+    ../../async/bounded_queue.h
     ../../async/threadpool.h
 )
-#link_test_libs(${PROJECT_NAME})
-#add_catch_test(${PROJECT_NAME})
