@@ -7,7 +7,7 @@ It's written in pure C++14 (C++11 support with preprocessor macros), no dependen
 
 Note: This library is originally designed for 64bit system. It has been tested on 64bit arch X86-64 and ARMV8. ARMV7 (32bit) is not supported yet.
 
-##change logs
+## change logs
 * Jun. 2018:
   * Tested on Raspberry Pi 3 B+ with Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64)
   * Added Benchmark Results for Raspberry Pi 3 B+ ARMV8
@@ -49,7 +49,7 @@ option(WITH_CPPRESTSDK "Build Cpprestsdk Test" ON)
 ```
 
 
-### Build for Linux or Mac
+### Build for Linux or Mac (x86-64 & ARMV8)
 ```
 #to use clang (linux) with following export command
 #EXPORT CC=clang-3.8
@@ -65,7 +65,7 @@ cmake --build build --config RelWithDebInfo
 cmake --build build --config MinSizeRel
 ```
 
-### Build for Windows
+### Build for Windows (X86-64)
 ```
 #for VS 2015
 cmake -H. -Bbuild -G "Visual Studio 14 2015 Win64"

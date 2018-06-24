@@ -13,7 +13,7 @@ TEST_CASE("utility getBitmask", "utility getBitmask") {
   CHECK((getBitmask<uint64_t>(24) << 40) == 0xFFFFFF0000000000ULL);
   CHECK((getBitmask<uint64_t>(12) << 8) == 0x00000000000FFF00ULL);
   CHECK((getBitmask<uint64_t>(10) << 20) == 0x000000003FF00000ULL);
-  CHECK((getBitmask<uint64_t>(10) << 30) == 0x000000FFC0000000);
+  CHECK((getBitmask<uint64_t>(10) << 30) == 0x000000FFC0000000ULL);
 }
 
 TEST_CASE("utility getSetBitsCount") {
@@ -22,7 +22,7 @@ TEST_CASE("utility getSetBitsCount") {
   CHECK(getSetBitsCount(0xFFFFFF0000000000ULL) == 24);
   CHECK(getSetBitsCount(0x00000000000FFF00ULL) == 12);
   CHECK(getSetBitsCount(0x000000003FF00000ULL) == 10);
-  CHECK(getSetBitsCount(0x000000FFC0000000) == 10);
+  CHECK(getSetBitsCount(0x000000FFC0000000ULL) == 10);
 }
 
 TEST_CASE("utility getShiftBitsCount") {
@@ -31,5 +31,5 @@ TEST_CASE("utility getShiftBitsCount") {
   CHECK(getShiftBitsCount(0xFFFFFF0000000000ULL) == 40);
   CHECK(getShiftBitsCount(0x00000000000FFF00ULL) == 8);
   CHECK(getShiftBitsCount(0x000000003FF00000ULL) == 20);
-  CHECK(getShiftBitsCount(0x000000FFC0000000) == 30);
+  CHECK(getShiftBitsCount(0x000000FFC0000000ULL) == 30);
 }

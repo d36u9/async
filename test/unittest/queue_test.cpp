@@ -178,6 +178,7 @@ TEST_CASE("queue: multi-thread test") {
       }
     }));
   }
+  std::atomic<size_t> totalCount(iteration);
   for (int i = 0; i < tcount; ++i) {
     threads.push_back(std::thread([&, i]() mutable {
       for (; !start;)
@@ -185,11 +186,13 @@ TEST_CASE("queue: multi-thread test") {
 
       int tsum = 0;
       bool pop = true;
-      while (!consumestop || pop) {
+      while (!consumestop || totalCount > 0) {
         int v(0);
         pop = q.dequeue(v);
-        if (pop)
+        if (pop) {
           tsum += v;
+          totalCount.fetch_sub(1);
+        }
       }
       sum += tsum;
     }));
@@ -233,6 +236,7 @@ TEST_CASE("queue: multi-thread test with bulk operations") {
         q.bulk_enqueue(iv.begin(), iv.size());
     }));
   }
+  std::atomic<size_t> totalCount(iteration);
   for (int i = 0; i < tcount; ++i) {
     threads.push_back(std::thread([&, i]() mutable {
       for (; !start;)
@@ -240,7 +244,7 @@ TEST_CASE("queue: multi-thread test with bulk operations") {
 
       int tsum = 0;
       size_t pop = 0;
-      while (!consumestop || pop > 0) {
+      while (!consumestop || totalCount > 0) {
         std::vector<int> v;
         v.reserve(5);
         auto it = std::inserter(v, std::begin(v));
@@ -248,6 +252,7 @@ TEST_CASE("queue: multi-thread test with bulk operations") {
         if (pop > 0) {
           for (auto &&i : v)
             tsum += i;
+          totalCount.fetch_sub(pop);
         }
       }
       sum += tsum;
