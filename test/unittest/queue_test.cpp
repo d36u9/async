@@ -224,7 +224,7 @@ TEST_CASE("queue: multi-thread test with bulk operations") {
 
       for (auto j = i; j < iteration; j += tcount) {
         iv.push_back(j);
-        if (iv.size() >= tcount) {
+        if (static_cast<int>(iv.size()) >= tcount) {
           q.bulk_enqueue(std::begin(iv), iv.size());
           iv.clear();
         }

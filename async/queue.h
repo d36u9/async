@@ -109,7 +109,7 @@ public:
 
   template <typename IT> void bulk_enqueue(IT it, size_t count) {
     index firstidx(0), preidx(0), lastidx(0);
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       lastidx = encapsulate(*it++);
       if (firstidx == 0)
         firstidx = lastidx;

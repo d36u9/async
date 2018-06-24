@@ -3,9 +3,15 @@
 
 ## Welcome
 async is a tiny C++ header-only high-performance library for async calls handled by a thread-pool, which is built on top of an unbounded MPMC lock-free queue.
-It's written in pure C++14 (C++11 support with preprocessor macros), no dependencies on other 3rd party libraries.
+It's written in pure C++14 (C++11 support with preprocessor macros), no dependencies on other 3rd party libraries. 
 
-* New:
+Note: This library is originally designed for 64bit system. It has been tested on 64bit arch X86-64 and ARMV8. ARMV7 (32bit) is not supported yet.
+
+##change logs
+* Jun. 2018:
+  * Tested on Raspberry Pi 3 B+ with Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64)
+  * Added Benchmark Results for Raspberry Pi 3 B+ ARMV8
+* Sept. 2017:
   * Significantly improved the performance of async::queue without bulk operations. 
   * async::threadpool also benifits from this change.
   * A bounded MPMC queue `async::bounded_queue` was added to the lib, which is pretty useful for memory constrainted system or some fixed-size message pipeline design. The overall performance of this buffer based `async::bounded_queue` is comparable to bulk operations of node-based `async::queue`. `async::bounded_queue` shares the almost identical interface as `async::queue`, except for bulk operations, and a size prarameter has to be passed to `bounded_queue`'s constructor, and also added blocking methods (`blocking_enqueue` & `blocking_dequeue`). `TRAIT::NOEXCEPT_CHECK` setting is also similar to `async::queue` to help handle exceptions that may be thrown in element's ctor.  `bounded_queue` is basically a C++ implementation of [PTLQueue](https://blogs.oracle.com/dave/ptlqueue-:-a-scalable-bounded-capacity-mpmc-queue) design (Please read Dave Dice's article for details and references).
@@ -163,7 +169,7 @@ The test benchamarks the following task/job based async implementation:
 * std::async
 * boost::async
 * AsioThreadPool (my another implementation based on boost::asio, has very stable and good performance, especially on Windows with iocp)
-* Microsoft::PPL (pplx from [cpprestsdk](https://github.com/Microsoft/cpprestsdk) on Linux& MacOS) or PPL on windows)
+* Microsoft::PPL (pplx from [cpprestsdk](https://github.com/Microsoft/cpprestsdk) on Linux& MacOS or PPL on windows)
 
 
 e.g. Windows 10 64bit Intel i7-6700K 16GB RAM 480GB SSD Visual Studio 2017 (cl 19.11.25507.1 x64)
@@ -260,6 +266,27 @@ Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and
    *Microsoft::PPL (time/task) avg: 1199 ns  max: 1262 ns  min: 1175 ns avg_task_post: 988 ns
     AsioThreadPool (time/task) avg: 783 ns  max: 960 ns  min: 706 ns avg_task_post: 375 ns
      *boost::async (time/task) avg: 103572 ns  max: 107041 ns  min: 101993 ns avg_task_post: 103542 ns
+```
+
+e.g. Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64) on Raspberry Pi 3 B+
+```
+Benchmark Test Run: 1 Producers 3(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 7809 ns  max: 10467 ns  min: 7453 ns avg_task_post: 7261 ns
+       *std::async (time/task) avg: 139664 ns  max: 3453077 ns  min: 104589 ns avg_task_post: 117819 ns
+    AsioThreadPool (time/task) avg: 6545 ns  max: 8804 ns  min: 5678 ns avg_task_post: 5654 ns
+     *boost::async (time/task) avg: 37629 ns  max: 38978 ns  min: 36769 ns avg_task_post: 36933 ns
+
+Benchmark Test Run: 2 Producers 2(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 2207 ns  max: 4084 ns  min: 1809 ns avg_task_post: 1325 ns
+       *std::async (time/task) avg: 431781 ns  max: 17500817 ns  min: 91919 ns avg_task_post: 407595 ns
+    AsioThreadPool (time/task) avg: 2251 ns  max: 3351 ns  min: 1839 ns avg_task_post: 1405 ns
+     *boost::async (time/task) avg: 48456 ns  max: 50578 ns  min: 46698 ns avg_task_post: 47753 ns
+
+Benchmark Test Run: 3 Producers 1(* not applied) Consumers  with 21000 tasks and run 100 batches
+  async::threapool (time/task) avg: 3346 ns  max: 3974 ns  min: 2635 ns avg_task_post: 1017 ns
+       *std::async (time/task) avg: 110853 ns  max: 768224 ns  min: 103045 ns avg_task_post: 86361 ns
+    AsioThreadPool (time/task) avg: 3828 ns  max: 4209 ns  min: 3354 ns avg_task_post: 976 ns
+     *boost::async (time/task) avg: 59094 ns  max: 67042 ns  min: 54802 ns avg_task_post: 58365 ns
 ```
 
 ### queue benchmark
@@ -426,6 +453,35 @@ Benchmark Test Run: 7 Producers 1 Consumers  with 10000 Ops and run 1000 batches
 async::queue::bulk(16) (time/op) avg: 26 ns  max: 78 ns  min: 21 ns
           async::queue (time/op) avg: 123 ns  max: 695 ns  min: 80 ns
 boost::lockfree::queue (time/op) avg: 195 ns  max: 615 ns  min: 154 ns
+```
+
+e.g. Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64) on Raspberry Pi 3 B+
+```
+Single Producer Single Consumer Benchmark with 10000 Ops and run 1000 batches
+Benchmark Test Run: 1 Producers 1 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 67 ns  max: 697 ns  min: 53 ns
+async::queue::bulk(16) (time/op) avg: 144 ns  max: 434 ns  min: 130 ns
+          async::queue (time/op) avg: 141 ns  max: 441 ns  min: 115 ns
+boost::lockfree::queue (time/op) avg: 182 ns  max: 514 ns  min: 168 ns
+boost::lockfree::spsc_queue (time/op) avg: 62 ns  max: 430 ns  min: 53 ns
+
+Benchmark Test Run: 1 Producers 3 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 72 ns  max: 574 ns  min: 59 ns
+async::queue::bulk(16) (time/op) avg: 141 ns  max: 515 ns  min: 116 ns
+          async::queue (time/op) avg: 181 ns  max: 590 ns  min: 134 ns
+boost::lockfree::queue (time/op) avg: 192 ns  max: 1045 ns  min: 172 ns
+
+Benchmark Test Run: 2 Producers 2 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 82 ns  max: 457 ns  min: 65 ns
+async::queue::bulk(16) (time/op) avg: 99 ns  max: 701 ns  min: 84 ns
+          async::queue (time/op) avg: 124 ns  max: 550 ns  min: 108 ns
+boost::lockfree::queue (time/op) avg: 151 ns  max: 847 ns  min: 138 ns
+
+Benchmark Test Run: 3 Producers 1 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 88 ns  max: 538 ns  min: 67 ns
+async::queue::bulk(16) (time/op) avg: 89 ns  max: 717 ns  min: 71 ns
+          async::queue (time/op) avg: 131 ns  max: 631 ns  min: 118 ns
+boost::lockfree::queue (time/op) avg: 165 ns  max: 644 ns  min: 149 ns
 ```
 
 ## coding style

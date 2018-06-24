@@ -11,7 +11,7 @@
 class AsioThreadPool {
 public:
   AsioThreadPool(size_t threads) : worker(service) {
-    for (int i = 0; i < threads; ++i) {
+    for (size_t i = 0; i < threads; ++i) {
       tpgroup.create_thread(
           boost::bind(&boost::asio::io_service::run, &service));
     }
