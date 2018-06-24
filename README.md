@@ -5,12 +5,15 @@
 async is a tiny C++ header-only high-performance library for async calls handled by a thread-pool, which is built on top of an unbounded MPMC lock-free queue.
 It's written in pure C++14 (C++11 support with preprocessor macros), no dependencies on other 3rd party libraries. 
 
-Note: This library is originally designed for 64bit system. It has been tested on 64bit arch X86-64 and ARMV8. ARMV7 (32bit) is not supported yet.
+Note: This library is originally designed for 64bit system. It has been tested on arch X86-64 and ARMV8(64bit), and ARMV7(32bit). 
 
 ## change logs
 * Jun. 2018:
+  * Added support for ARMV7 & V8
   * Tested on Raspberry Pi 3 B+ with Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64)
-  * Added Benchmark Results for Raspberry Pi 3 B+ ARMV8
+  * Tested on Raspberry Pi 3 B+ with Raspbian ARMV7 32bit (Linux 4.14.34-v7 armv7l)
+  * Added Benchmark Results for Raspberry Pi 3 B+ ARMV8 (Linux Pi64 4.14.44-V8 AArch64)
+  * Added Benchmark Results for Raspberry Pi 3 B+ ARMV7 32bit (Linux 4.14.34-v7 armv7l)
 * Sept. 2017:
   * Significantly improved the performance of async::queue without bulk operations. 
   * async::threadpool also benifits from this change.
@@ -49,7 +52,7 @@ option(WITH_CPPRESTSDK "Build Cpprestsdk Test" ON)
 ```
 
 
-### Build for Linux or Mac (x86-64 & ARMV8)
+### Build for Linux or Mac (x86-64 & ARMV7&V8)
 ```
 #to use clang (linux) with following export command
 #EXPORT CC=clang-3.8
@@ -268,7 +271,7 @@ Benchmark Test Run: 7 Producers 1(* not applied) Consumers  with 21000 tasks and
      *boost::async (time/task) avg: 103572 ns  max: 107041 ns  min: 101993 ns avg_task_post: 103542 ns
 ```
 
-e.g. Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64) on Raspberry Pi 3 B+
+e.g. Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64) gcc 7.3.0 on Raspberry Pi 3 B+
 ```
 Benchmark Test Run: 1 Producers 3(* not applied) Consumers  with 21000 tasks and run 100 batches
   async::threapool (time/task) avg: 7809 ns  max: 10467 ns  min: 7453 ns avg_task_post: 7261 ns
@@ -455,7 +458,7 @@ async::queue::bulk(16) (time/op) avg: 26 ns  max: 78 ns  min: 21 ns
 boost::lockfree::queue (time/op) avg: 195 ns  max: 615 ns  min: 154 ns
 ```
 
-e.g. Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64) on Raspberry Pi 3 B+
+e.g. Gentoo ARMV8 64bit (Linux Pi64 4.14.44-V8 AArch64) gcc 7.3.0 on Raspberry Pi 3 B+
 ```
 Single Producer Single Consumer Benchmark with 10000 Ops and run 1000 batches
 Benchmark Test Run: 1 Producers 1 Consumers  with 10000 Ops and run 1000 batches
@@ -484,12 +487,44 @@ async::queue::bulk(16) (time/op) avg: 89 ns  max: 717 ns  min: 71 ns
 boost::lockfree::queue (time/op) avg: 165 ns  max: 644 ns  min: 149 ns
 ```
 
+e.g. Raspbian ARMV7 32bit (Linux 4.14.34-v7 armv7l) gcc 6.3.0 on Raspberry Pi 3 B+
+```
+Single Producer Single Consumer Benchmark with 10000 Ops and run 1000 batches
+Benchmark Test Run: 1 Producers 1 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 227 ns  max: 912 ns  min: 179 ns
+async::queue::bulk(16) (time/op) avg: 442 ns  max: 1236 ns  min: 365 ns
+          async::queue (time/op) avg: 423 ns  max: 1249 ns  min: 364 ns
+boost::lockfree::queue (time/op) avg: 474 ns  max: 1017 ns  min: 410 ns
+boost::lockfree::spsc_queue (time/op) avg: 70 ns  max: 761 ns  min: 48 ns
+
+Benchmark Test Run: 1 Producers 3 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 241 ns  max: 1482 ns  min: 187 ns
+async::queue::bulk(16) (time/op) avg: 470 ns  max: 1259 ns  min: 354 ns
+          async::queue (time/op) avg: 488 ns  max: 1482 ns  min: 375 ns
+boost::lockfree::queue (time/op) avg: 462 ns  max: 1158 ns  min: 427 ns
+
+
+Benchmark Test Run: 2 Producers 2 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 208 ns  max: 348 ns  min: 158 ns
+async::queue::bulk(16) (time/op) avg: 285 ns  max: 543 ns  min: 237 ns
+          async::queue (time/op) avg: 306 ns  max: 761 ns  min: 234 ns
+boost::lockfree::queue (time/op) avg: 334 ns  max: 1481 ns  min: 261 ns
+
+
+Benchmark Test Run: 3 Producers 1 Consumers  with 10000 Ops and run 1000 batches
+  async::bounded_queue (time/op) avg: 241 ns  max: 884 ns  min: 192 ns
+async::queue::bulk(16) (time/op) avg: 210 ns  max: 651 ns  min: 180 ns
+          async::queue (time/op) avg: 439 ns  max: 682 ns  min: 375 ns
+boost::lockfree::queue (time/op) avg: 420 ns  max: 903 ns  min: 320 ns
+```
+
 ## coding style
 all code has been formated by clang-format. It may be more easy to read in text editor or may be not :)
 
-## Many Thanks to 3rd party libraries and their developers
+## Many Thanks to 3rd party and their developers
 * [Boost](http://www.boost.org/)
 * [Boost CMake](https://github.com/Orphis/boost-cmake) Easy Boost integration in CMake projects!
 * [Catch](https://github.com/philsquared/Catch) A powerful test framework for unit test.
 * [cpprestsdk](https://github.com/Microsoft/cpprestsdk) The C++ REST SDK is a Microsoft project for cloud-based client-server communication in native code using a modern asynchronous C++ API design.
 * [rlutil](https://github.com/tapio/rlutil) provides cross-platform console-mode functions to position and colorize text.
+* [sakaki](https://github.com/sakaki-/gentoo-on-rpi3-64bit) Bootable 64-bit Gentoo image for the Raspberry Pi 3 B / B+, with Linux 4.14

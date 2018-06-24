@@ -326,8 +326,18 @@ private:       // internal data structures
   };
 
   inline node &getNode(index &ix) { // return an existing or new node
+    #if defined(__arm__) && (!defined(__aarch64__))
+    //for ARMV7 or below
+    ix.value = nodeCount.load(std::memory_order_relaxed);
+    auto val = ix.value + 1;
+    while(!nodeCount.compare_exchange_weak(
+      ix.value, val, std::memory_order_release, std::memory_order_relaxed)) {
+        val = ix.value + 1;
+    }
+    #else
     ix.value = nodeCount.fetch_add(static_cast<std::uint64_t>(1),
-                                   std::memory_order_relaxed);
+                              std::memory_order_relaxed);
+    #endif
     if ((ix.value & BaseMask) == 0)
       return container.get(ix);
     else
