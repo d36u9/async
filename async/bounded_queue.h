@@ -17,6 +17,7 @@ namespace async {
 struct bounded_traits {
   static constexpr bool NOEXCEPT_CHECK = false; // exception handling flag
   static constexpr size_t CachelineSize = 64;
+  static constexpr size_t CachelineAlignment = 16; // must not be larger than alignof(std::max_align_t), see issue #1
   using sequence_type = uint64_t;
 };
 
@@ -27,6 +28,7 @@ private:
 
 public:
   static constexpr size_t cacheline_size = TRAITS::CachelineSize;
+  static constexpr size_t cacheline_alignment = TRAITS::CachelineAlignment;
   using seq_t = typename TRAITS::sequence_type;
   explicit bounded_queue(size_t size)
       : fastmodulo((size > 0 && ((size & (size - 1)) == 0))),
@@ -331,10 +333,10 @@ private:
   element *const elements; // pointer to buffer
   size_t const mask;       // used if fastmodulo is true
   size_t const qsize;      // queue size
-  alignas(cacheline_size) char cacheline_padding1[cacheline_size];
-  alignas(cacheline_size) std::atomic<seq_t> enqueueIx;
-  alignas(cacheline_size) char cacheline_padding2[cacheline_size];
-  alignas(cacheline_size) std::atomic<seq_t> dequeueIx;
-  alignas(cacheline_size) char cacheline_padding3[cacheline_size];
+  alignas(cacheline_alignment) char cacheline_padding1[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<seq_t> enqueueIx;
+  alignas(cacheline_alignment) char cacheline_padding2[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<seq_t> dequeueIx;
+  alignas(cacheline_alignment) char cacheline_padding3[cacheline_size];
 };
 } // namespace async

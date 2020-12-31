@@ -21,6 +21,7 @@ struct traits // 3-level (L3, L2, L1) depth of nested group design, total
   static constexpr uint64_t Basebits = 8;
   static constexpr bool NOEXCEPT_CHECK = false; // exception handling flag
   static constexpr size_t CachelineSize = 64;
+  static constexpr size_t CachelineAlignment = 16; // must not be larger than alignof(std::max_align_t), see issue #1
 };
 
 template <typename T, typename TRAITS = traits> class queue final {
@@ -29,6 +30,7 @@ public:
     return std::atomic<uint64_t>{}.is_lock_free();
   }
   static constexpr size_t cacheline_size = TRAITS::CachelineSize;
+  static constexpr size_t cacheline_alignment = TRAITS::CachelineAlignment;
   static constexpr uint64_t BaseMask = getBitmask<uint64_t>(TRAITS::Basebits);
   static constexpr uint64_t L1Mask = getBitmask<uint64_t>(TRAITS::L1bits)
                                      << TRAITS::Basebits;
@@ -411,17 +413,17 @@ private:       // internal data structures
   using L1container = nestedcontainer<basecontainer, L1Mask>;
   using L2container = nestedcontainer<L1container, L2Mask>;
   nestedcontainer<L2container, L3Mask> container;
-  alignas(cacheline_size) char cacheline_padding1[cacheline_size];
-  alignas(cacheline_size) std::atomic<uint64_t> nodeCount; // # of allocated nodes, not the #
-                                                           // of elements stored in the queue
-  alignas(cacheline_size) char cacheline_padding2[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> dequeueIx;    // dequeue pointer
-  alignas(cacheline_size) char cacheline_padding3[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> enqueueIx;    // enqueue pointer
-  alignas(cacheline_size) char cacheline_padding4[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> spawnIx;      // spawn pointer
-  alignas(cacheline_size) char cacheline_padding5[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> recycleIx;    // recycle pointer
-  alignas(cacheline_size) char cacheline_padding6[cacheline_size];
+  alignas(cacheline_alignment) char cacheline_padding1[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<uint64_t> nodeCount; // # of allocated nodes, not the #
+                                                                // of elements stored in the queue
+  alignas(cacheline_alignment) char cacheline_padding2[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> dequeueIx;    // dequeue pointer
+  alignas(cacheline_alignment) char cacheline_padding3[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> enqueueIx;    // enqueue pointer
+  alignas(cacheline_alignment) char cacheline_padding4[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> spawnIx;      // spawn pointer
+  alignas(cacheline_alignment) char cacheline_padding5[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> recycleIx;    // recycle pointer
+  alignas(cacheline_alignment) char cacheline_padding6[cacheline_size];
 };
 } // namespace async
