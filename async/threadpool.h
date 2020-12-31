@@ -21,7 +21,7 @@ class threadpool final {
 public:
   static int defaultpoolsize() { return std::thread::hardware_concurrency(); }
 
-  threadpool(int poolsize = static_cast<int>(defaultpoolsize()))
+  threadpool(int poolsize = defaultpoolsize())
       : idlecount(0), conflag(false) {
     configurepool(poolsize);
   }
@@ -33,7 +33,7 @@ public:
 
   ~threadpool() { cleanup(); }
 
-  inline size_t size() {
+  inline std::size_t size() {
     std::lock_guard<std::mutex> lg(poolmux);
     return threads.size();
   }
@@ -43,11 +43,11 @@ public:
   // can be called to resize the pool at any time after construction and before
   // destruction, recommand to be called from main thread or manager thread even
   // though it is thread-safe
-  void configurepool(size_t poolsize) {
+  void configurepool(std::size_t poolsize) {
     std::unique_lock<std::mutex> veclk(poolmux);
     auto currentsize = threads.size();
     if (currentsize < poolsize) { // expand the pool
-      for (auto const &v : std::vector<bool>(poolsize - currentsize)) {
+      for (std::size_t i = currentsize; i < poolsize; i++) {
         tpstops.emplace_back(addthread());
       }
     } else if (currentsize > poolsize) { // shrink the pool

@@ -16,9 +16,9 @@ namespace async {
 
 struct bounded_traits {
   static constexpr bool NOEXCEPT_CHECK = false; // exception handling flag
-  static constexpr size_t CachelineSize = 64;
-  static constexpr size_t CachelineAlignment = 16; // must not be larger than alignof(std::max_align_t), see issue #1
-  using sequence_type = uint64_t;
+  static constexpr std::size_t CachelineSize = 64;
+  static constexpr std::size_t CachelineAlignment = 16; // must not be larger than alignof(std::max_align_t), see issue #1
+  using sequence_type = std::uint64_t;
 };
 
 template <typename T, typename TRAITS = bounded_traits> class bounded_queue {
@@ -27,10 +27,10 @@ private:
                 "T must be nothrow destructible");
 
 public:
-  static constexpr size_t cacheline_size = TRAITS::CachelineSize;
-  static constexpr size_t cacheline_alignment = TRAITS::CachelineAlignment;
+  static constexpr std::size_t cacheline_size = TRAITS::CachelineSize;
+  static constexpr std::size_t cacheline_alignment = TRAITS::CachelineAlignment;
   using seq_t = typename TRAITS::sequence_type;
-  explicit bounded_queue(size_t size)
+  explicit bounded_queue(std::size_t size)
       : fastmodulo((size > 0 && ((size & (size - 1)) == 0))),
         bitshift(fastmodulo ? getShiftBitsCount(size) : 0),
         elements(new element[size]), mask(fastmodulo ? size - 1 : 0),
@@ -42,7 +42,7 @@ public:
   bounded_queue &operator=(bounded_queue const &) = delete;
   bounded_queue &operator=(bounded_queue &&) = delete;
   ~bounded_queue() { delete[] elements; }
-  size_t size() { return qsize; }
+  std::size_t size() { return qsize; }
 
   template <typename... Args, // NON-SAFE
             typename = typename std::enable_if<
@@ -331,8 +331,8 @@ private:
   bool const fastmodulo;   // true if qsize is power of 2
   int const bitshift;      // used if fastmodulo is true
   element *const elements; // pointer to buffer
-  size_t const mask;       // used if fastmodulo is true
-  size_t const qsize;      // queue size
+  std::size_t const mask;       // used if fastmodulo is true
+  std::size_t const qsize;      // queue size
   alignas(cacheline_alignment) char cacheline_padding1[cacheline_size];
   alignas(cacheline_alignment) std::atomic<seq_t> enqueueIx;
   alignas(cacheline_alignment) char cacheline_padding2[cacheline_size];
