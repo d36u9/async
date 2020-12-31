@@ -30,7 +30,7 @@ static constexpr unsigned int getSetBitsCount(std::uint64_t n) {
   return count;
 }
 
-static constexpr unsigned int getShiftBitsCount(uint64_t n) {
+static constexpr unsigned int getShiftBitsCount(std::uint64_t n) {
   // requires c++14
   unsigned int count{0};
   if (n == 0)
@@ -48,7 +48,7 @@ static constexpr unsigned int getSetBitsCount(std::uint64_t n) {
   return n == 0 ? 0 : 1 + getSetBitsCount(n & (n - 1));
 }
 
-static constexpr unsigned int getShiftBitsCount(uint64_t n) {
+static constexpr unsigned int getShiftBitsCount(std::uint64_t n) {
   return n == 0 ? 0 : ((n & 0x1) == 0 ? 1 + getShiftBitsCount(n >> 1) : 0);
 }
 
@@ -81,8 +81,8 @@ inline std::string getErrorMsg(std::string const &message, char const *file,
 #include <stdlib.h>
 #include <windows.h>
 
-static size_t cache_line_size() {
-  size_t line_size = 0;
+static std::size_t cache_line_size() {
+  std::size_t line_size = 0;
   DWORD buffer_size = 0;
   DWORD i = 0;
   SYSTEM_LOGICAL_PROCESSOR_INFORMATION *buffer = 0;
@@ -104,15 +104,15 @@ static size_t cache_line_size() {
 
 #elif defined(__linux__)
 #include <unistd.h>
-static size_t cache_line_size() {
-  size_t line_size = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
+static std::size_t cache_line_size() {
+  std::size_t line_size = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
   return line_size;
 }
 #elif defined(__APPLE__)
 #include <sys/sysctl.h>
-static size_t cache_line_size() {
-  size_t line_size = 0;
-  size_t size_of_linesize = sizeof(line_size);
+static std::size_t cache_line_size() {
+  std::size_t line_size = 0;
+  std::size_t size_of_linesize = sizeof(line_size);
   sysctlbyname("hw.cachelinesize", &line_size, &size_of_linesize, 0, 0);
   return line_size;
 }

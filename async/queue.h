@@ -14,34 +14,36 @@ namespace async {
 struct traits // 3-level (L3, L2, L1) depth of nested group design, total
               // indexing space is pow(2, 64-Tagbits)
 {             // user can change the bits settings by providing your own TRAITS
-  static constexpr uint64_t Tagbits = 24;
-  static constexpr uint64_t L3bits = 10;
-  static constexpr uint64_t L2bits = 10;
-  static constexpr uint64_t L1bits = 12;
-  static constexpr uint64_t Basebits = 8;
+  static constexpr std::uint64_t Tagbits = 24;
+  static constexpr std::uint64_t L3bits = 10;
+  static constexpr std::uint64_t L2bits = 10;
+  static constexpr std::uint64_t L1bits = 12;
+  static constexpr std::uint64_t Basebits = 8;
   static constexpr bool NOEXCEPT_CHECK = false; // exception handling flag
-  static constexpr size_t CachelineSize = 64;
+  static constexpr std::size_t CachelineSize = 64;
+  static constexpr std::size_t CachelineAlignment = 16; // must not be larger than alignof(std::max_align_t), see issue #1
 };
 
 template <typename T, typename TRAITS = traits> class queue final {
 public:
   static bool is_lock_free_v() {
-    return std::atomic<uint64_t>{}.is_lock_free();
+    return std::atomic<std::uint64_t>{}.is_lock_free();
   }
-  static constexpr size_t cacheline_size = TRAITS::CachelineSize;
-  static constexpr uint64_t BaseMask = getBitmask<uint64_t>(TRAITS::Basebits);
-  static constexpr uint64_t L1Mask = getBitmask<uint64_t>(TRAITS::L1bits)
+  static constexpr std::size_t cacheline_size = TRAITS::CachelineSize;
+  static constexpr std::size_t cacheline_alignment = TRAITS::CachelineAlignment;
+  static constexpr std::uint64_t BaseMask = getBitmask<std::uint64_t>(TRAITS::Basebits);
+  static constexpr std::uint64_t L1Mask = getBitmask<std::uint64_t>(TRAITS::L1bits)
                                      << TRAITS::Basebits;
-  static constexpr uint64_t L2Mask = getBitmask<uint64_t>(TRAITS::L2bits)
+  static constexpr std::uint64_t L2Mask = getBitmask<std::uint64_t>(TRAITS::L2bits)
                                      << (TRAITS::Basebits + TRAITS::L1bits);
-  static constexpr uint64_t L3Mask =
-      getBitmask<uint64_t>(TRAITS::L3bits)
+  static constexpr std::uint64_t L3Mask =
+      getBitmask<std::uint64_t>(TRAITS::L3bits)
       << (TRAITS::Basebits + TRAITS::L1bits + TRAITS::L2bits);
-  static constexpr uint64_t TagMask =
-      getBitmask<uint64_t>(TRAITS::Tagbits)
+  static constexpr std::uint64_t TagMask =
+      getBitmask<std::uint64_t>(TRAITS::Tagbits)
       << (TRAITS::Basebits + TRAITS::L1bits + TRAITS::L2bits + TRAITS::L3bits);
-  static constexpr uint64_t TagShift = 64 - TRAITS::Tagbits;
-  static constexpr uint64_t TagPlus1 = static_cast<uint64_t>(1) << TagShift;
+  static constexpr std::uint64_t TagShift = 64 - TRAITS::Tagbits;
+  static constexpr std::uint64_t TagPlus1 = static_cast<std::uint64_t>(1) << TagShift;
 
 public: // assert bits settings meet requirements
   static_assert(TRAITS::Tagbits + TRAITS::L3bits + TRAITS::L2bits +
@@ -59,13 +61,13 @@ public:
   queue() : nodeCount(3), dequeueIx(2), enqueueIx(2), spawnIx(1), recycleIx(1) {
     container.get(index(0)); // allocate initial space
   }
-  queue(size_t size) // pre-allocate size
+  queue(std::size_t size) // pre-allocate size
       : nodeCount(3), dequeueIx(2), enqueueIx(2), spawnIx(1), recycleIx(1) {
     container.get(index(0));
 
-    if (size > (static_cast<uint64_t>(1) << TRAITS::Basebits)) {
+    if (size > (static_cast<std::uint64_t>(1) << TRAITS::Basebits)) {
       index ix;
-      for (size_t i = (static_cast<uint64_t>(1) << TRAITS::Basebits); i < size;
+      for (std::size_t i = (static_cast<std::uint64_t>(1) << TRAITS::Basebits); i < size;
            ++i) {
         auto &node = getNode(ix);
         recycle(ix);
@@ -107,9 +109,9 @@ public:
     return true;
   }
 
-  template <typename IT> void bulk_enqueue(IT it, size_t count) {
+  template <typename IT> void bulk_enqueue(IT it, std::size_t count) {
     index firstidx(0), preidx(0), lastidx(0);
-    for (size_t i = 0; i < count; ++i) {
+    for (std::size_t i = 0; i < count; ++i) {
       lastidx = encapsulate(*it++);
       if (firstidx == 0)
         firstidx = lastidx;
@@ -126,9 +128,9 @@ public:
   }
 
   template <typename IT>
-  size_t bulk_dequeue(IT &&it, size_t maxcount) // or IT& it to return the
+  std::size_t bulk_dequeue(IT &&it, std::size_t maxcount) // or IT& it to return the
   {
-    size_t count(0);
+    std::size_t count(0);
     while (maxcount-- && dequeue(*it++)) {
       ++count;
     }
@@ -181,15 +183,15 @@ public:
       }
     }
   }
-  uint64_t getNodeCount() { return nodeCount; } // get in-use-nodes count
+  std::uint64_t getNodeCount() { return nodeCount; } // get in-use-nodes count
 
 private:       // internal data structures
   struct index // simulate tagged pointer
   {
-    index(uint64_t newval) noexcept
+    index(std::uint64_t newval) noexcept
         : value(newval) {} // is_trivially_copyable must be true
     index() noexcept : value(0) {}
-    inline operator uint64_t() const { return value; }
+    inline operator std::uint64_t() const { return value; }
     std::uint64_t getVersion() { return (value & TagMask) >> TagShift; }
     inline void increTag() {
       value = (value & ~TagMask) | ((value + TagPlus1) & TagMask);
@@ -269,14 +271,14 @@ private:       // internal data structures
     inline node &get(index const &ix) { return operator[](ix); }
     inline node &at(index const &ix) { return operator[](ix); }
     inline node &operator[](index const &ix) { return nodes[ix & BaseMask]; }
-    std::array<node, static_cast<uint64_t>(1) << TRAITS::Basebits> nodes;
+    std::array<node, static_cast<std::uint64_t>(1) << TRAITS::Basebits> nodes;
   };
 
-  template <typename SubGroup, uint64_t BitMask> struct nestedcontainer {
-    static constexpr uint64_t mask = BitMask;
-    static constexpr uint64_t bits = getSetBitsCount(mask);
-    static constexpr uint64_t shift = getShiftBitsCount(mask);
-    std::array<std::atomic<SubGroup *>, static_cast<uint64_t>(1) << bits>
+  template <typename SubGroup, std::uint64_t BitMask> struct nestedcontainer {
+    static constexpr std::uint64_t mask = BitMask;
+    static constexpr std::uint64_t bits = getSetBitsCount(mask);
+    static constexpr std::uint64_t shift = getShiftBitsCount(mask);
+    std::array<std::atomic<SubGroup *>, static_cast<std::uint64_t>(1) << bits>
         subgroups;
     nestedcontainer() {
       for (auto &gptr : subgroups) {
@@ -411,17 +413,17 @@ private:       // internal data structures
   using L1container = nestedcontainer<basecontainer, L1Mask>;
   using L2container = nestedcontainer<L1container, L2Mask>;
   nestedcontainer<L2container, L3Mask> container;
-  alignas(cacheline_size) char cacheline_padding1[cacheline_size];
-  alignas(cacheline_size) std::atomic<uint64_t> nodeCount; // # of allocated nodes, not the #
-                                                           // of elements stored in the queue
-  alignas(cacheline_size) char cacheline_padding2[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> dequeueIx;    // dequeue pointer
-  alignas(cacheline_size) char cacheline_padding3[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> enqueueIx;    // enqueue pointer
-  alignas(cacheline_size) char cacheline_padding4[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> spawnIx;      // spawn pointer
-  alignas(cacheline_size) char cacheline_padding5[cacheline_size];
-  alignas(cacheline_size) std::atomic<index> recycleIx;    // recycle pointer
-  alignas(cacheline_size) char cacheline_padding6[cacheline_size];
+  alignas(cacheline_alignment) char cacheline_padding1[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<std::uint64_t> nodeCount; // # of allocated nodes, not the #
+                                                                // of elements stored in the queue
+  alignas(cacheline_alignment) char cacheline_padding2[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> dequeueIx;    // dequeue pointer
+  alignas(cacheline_alignment) char cacheline_padding3[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> enqueueIx;    // enqueue pointer
+  alignas(cacheline_alignment) char cacheline_padding4[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> spawnIx;      // spawn pointer
+  alignas(cacheline_alignment) char cacheline_padding5[cacheline_size];
+  alignas(cacheline_alignment) std::atomic<index> recycleIx;    // recycle pointer
+  alignas(cacheline_alignment) char cacheline_padding6[cacheline_size];
 };
 } // namespace async
